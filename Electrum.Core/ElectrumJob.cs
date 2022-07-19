@@ -10,8 +10,8 @@ namespace Electrum.Core
         public string JobName { get; set; }
 
         public string[] Parameters { get; set; }
-        public TimeSpan ExecutionTime { get; internal set; }
-        public JobResult Result { get; internal set; }
-        public string? Error { get; internal set; }
+        public TimeSpan ExecutionTime { get; set; }
+        public JobStatus Status { get; set; }
+        public string? Error { get; set; }
     }
 }
