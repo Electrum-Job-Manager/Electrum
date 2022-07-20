@@ -39,7 +39,7 @@ namespace Electrum.Core.Execution
                 var hasExecutorInThatNamespace = ExecutableJobsInNamespaces.ContainsKey(job.Namespace.Name);
                 if (!hasExecutorInThatNamespace)
                 {
-                    job.Result = Enums.JobResult.MissingExecutor;
+                    job.Status = Enums.JobStatus.MissingExecutor;
                     Log.Warning("Attempted to execute job {JobId} in namespace {Namespace} but no executor was found.", job.Id, job.Namespace.Name);
                     return job;
                 }
@@ -47,23 +47,23 @@ namespace Electrum.Core.Execution
                 var executor = jobsInNamespace.FirstOrDefault(x => x.JobName == job.JobName);
                 if (executor == null)
                 {
-                    job.Result = Enums.JobResult.MissingExecutor;
+                    job.Status = Enums.JobStatus.MissingExecutor;
                     Log.Warning("Attempted to execute job {JobId} in namespace {Namespace} with name {JobName} but no executor was found with that name.", job.Id, job.Namespace.Name, job.JobName);
                     return job;
                 }
                 Log.Information("Executing job {JobId} in namespace {Namespace} with name {JobName} and with {ParameterCount} parameter(s).", job.Id, job.Namespace.Name, job.JobName, job.Parameters.Length);
                 var result = executor.Execute(job);
-                if (job.Result == Enums.JobResult.Warning)
+                if (job.Status == Enums.JobStatus.Warning)
                 {
-                    Log.Warning("Job {JobId} executed in {JobExecutionTime} with result '{JobResult}'. Message: ", job.Id, job.ExecutionTime, job.Result, job.Error);
+                    Log.Warning("Job {JobId} executed in {JobExecutionTime} with status '{JobStatus}'. Message: ", job.Id, job.ExecutionTime, job.Status, job.Error);
                 }
-                else if (job.Result == Enums.JobResult.Error)
+                else if (job.Status == Enums.JobStatus.Error)
                 {
-                    Log.Error("Job {JobId} executed in {JobExecutionTime} with result '{JobResult}'. Message: ", job.Id, job.ExecutionTime, job.Result, job.Error);
+                    Log.Error("Job {JobId} executed in {JobExecutionTime} with status '{JobStatus}'. Message: ", job.Id, job.ExecutionTime, job.Status, job.Error);
                 }
                 else
                 {
-                    Log.Information("Executed job {JobId} in {JobExecutionTime} with result '{JobResult}'", job.Id, job.ExecutionTime, job.Result);
+                    Log.Information("Executed job {JobId} in {JobExecutionTime} with status '{JobStatus}'", job.Id, job.ExecutionTime, job.Status);
                 }
             }
             return job;

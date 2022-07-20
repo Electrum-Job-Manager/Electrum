@@ -43,10 +43,10 @@ namespace Electrum.Core.Execution
             try
             {
                 var result = Method.Invoke(this, new object[] { job });
-                job.Result = JobResult.Success;
+                job.Status = JobStatus.Success;
             } catch (Exception ex)
             {
-                job.Result = JobResult.Error;
+                job.Status = JobStatus.Error;
                 job.Error = ex.Message;
             }
             sw.Stop();

@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -78,6 +80,57 @@ namespace Electrum.Core.Logging
                 }
             }
 
+            public Microsoft.Extensions.Logging.LogLevel MELLevel
+            {
+                get
+                {
+                    switch(Level)
+                    {
+                        case LogLevel.Fine:
+                        case LogLevel.Verbose:
+                            return Microsoft.Extensions.Logging.LogLevel.Trace;
+                        case LogLevel.Debug:
+                            return Microsoft.Extensions.Logging.LogLevel.Debug;
+                        case LogLevel.Info:
+                            return Microsoft.Extensions.Logging.LogLevel.Information;
+                        case LogLevel.Warning:
+                            return Microsoft.Extensions.Logging.LogLevel.Warning;
+                        case LogLevel.Error:
+                            return Microsoft.Extensions.Logging.LogLevel.Error;
+                        case LogLevel.Fatal:
+                            return Microsoft.Extensions.Logging.LogLevel.Critical;
+                        default:
+                            return Microsoft.Extensions.Logging.LogLevel.Information;
+                    }
+                }
+            }
+
+            public void LogToMEL(ILogger logger)
+            {
+                if (Template != null)
+                {
+                    if (Error != null)
+                    {
+                        logger.Log(MELLevel, Error.ToException(), Template, Properties.Values.ToArray());
+                    }
+                    else
+                    {
+                        logger.Log(MELLevel, Template, Properties.Values.ToArray());
+                    }
+                }
+                else
+                {
+                    if (Error != null)
+                    {
+                        logger.Log(MELLevel, Error.ToException(), Message);
+                    }
+                    else
+                    {
+                        logger.Log(MELLevel, Message);
+                    }
+                }
+            }
+
             [Serializable]
             public class JobLogRowError
             {
@@ -106,11 +159,37 @@ namespace Electrum.Core.Logging
                 {
                     return this.TypeName + ": " + this.Message + "\n" + this.StackTrace;
                 }
+
+                public Exception ToException()
+                {
+                    return new JobLogRowErrorException(this);
+                }
+
+                [Serializable]
+                public class JobLogRowErrorException : Exception
+                {
+                    private readonly JobLogRowError jobLogRowError;
+
+                    public override string? StackTrace => jobLogRowError.StackTrace;
+                    public override string Message => jobLogRowError.TypeName + ": " + jobLogRowError.Message ?? "";
+                    public override string? Source => jobLogRowError.TypeName;
+
+                    public JobLogRowErrorException(JobLogRowError jobLogRowError)
+                    {
+                        this.jobLogRowError = jobLogRowError;
+                    }
+
+                    public override string ToString()
+                    {
+                        return jobLogRowError.ToString();
+                    }
+                }
             }
         }
 
-        internal JobLogger(Guid jobId, IJobLoggingClient jobLoggingClient, bool enableLiveLogging)
+        internal JobLogger(ILogger<JobLogger> logger, Guid jobId, IJobLoggingClient jobLoggingClient, bool enableLiveLogging)
         {
+            Logger = logger;
             JobId = jobId;
             JobLoggingClient = jobLoggingClient;
             LiveLoggingEnabled = enableLiveLogging;
@@ -119,6 +198,7 @@ namespace Electrum.Core.Logging
         public bool LiveLoggingEnabled { get; set; }
         public Guid JobId { get; }
         public IJobLoggingClient JobLoggingClient { get; }
+        public ILogger<JobLogger> Logger { get; }
 
         internal List<JobLogRow> logRows = new List<JobLogRow>();
 
@@ -129,6 +209,7 @@ namespace Electrum.Core.Logging
             {
                 JobLoggingClient.WriteRow(JobId, row);
             }
+            row.LogToMEL(Logger);
         }
 
         public void SaveRows()

@@ -11,5 +11,7 @@ namespace Electrum.Core.Store
     {
         public T Add(T entity);
         public void Remove(T entity);
+        public T Save(T enity);
+        public T? GetByKey(object keyValue);
     }
 }

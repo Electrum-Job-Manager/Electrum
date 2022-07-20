@@ -9,7 +9,7 @@ namespace Electrum.Core.Logging
     public class ElectrumLogManager
     {
 
-        public List<ILogProvider> Loggers { get; set; } = new List<ILogProvider> ();
+        public List<ILogProvider<object>> Loggers { get; set; } = new List<ILogProvider<object>> ();
 
         public void SetContext(string key, string value)
         {

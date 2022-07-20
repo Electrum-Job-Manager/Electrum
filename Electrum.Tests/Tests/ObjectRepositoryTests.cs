@@ -3,13 +3,19 @@ using Electrum.Core.Store;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
-namespace Electrum.Tests
+namespace Electrum.Tests.Tests
 {
     public class ObjectRepositoryTests
     {
 
         public ElectrumObjectRepositoryFactory RepositoryFactory => TestConfigurator.ServiceProvider.GetService<ElectrumObjectRepositoryFactory>();
+
+        public ObjectRepositoryTests(ITestOutputHelper output)
+        {
+            TestConfigurator.ConfigureLogger<ObjectRepositoryTests>(output);
+        }
 
         [Fact]
         public void CanGetRepositoryFactory()
@@ -161,6 +167,27 @@ namespace Electrum.Tests
             repo.Remove(testItem);
             var item = repo.FirstOrDefault(x => x.Id == addedItem.Id);
             Assert.Null(item);
+        }
+
+        [Fact]
+        public void CanGetItemByKey()
+        {
+            var repo = RepositoryFactory.GetRepo<ElectrumJob>();
+            Assert.NotNull(repo);
+            var testItem = new ElectrumJob
+            {
+                Id = System.Guid.NewGuid(),
+                Namespace = TestConfigurator.Namespace
+            };
+            var addedItem = repo.Add(testItem);
+            Assert.NotNull(addedItem);
+            Assert.Equal(testItem.Id, addedItem.Id);
+            Assert.Equal(testItem.Namespace, addedItem.Namespace);
+
+            var byKey = repo.GetByKey(testItem.Id);
+            Assert.NotNull(byKey);
+            Assert.Equal(testItem.Id, byKey.Id);
+            Assert.Equal(testItem.Namespace.Name, byKey.Namespace.Name);
         }
     }
 }
