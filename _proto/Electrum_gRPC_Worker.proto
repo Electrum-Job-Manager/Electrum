@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+option csharp_namespace = "Electrum.Communication.gRPC.Worker";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+package ElectrumWorker;
+
+service JobExecutionClient {
+    rpc SubscribeToJobs (ClientInfo) returns (stream Job);
+    rpc JobCompleted (Job) returns (google.protobuf.Empty);
+    rpc WriteLogRow (JobLogRow) returns (google.protobuf.Empty);
+    rpc WriteLogRows (JobLogRowBatch) returns (google.protobuf.Empty);
+}
+
+message ClientInfo {
+    string id = 1;
+    int32 maxConcurrentJobs = 2;
+    int32 electrumClientVersion = 3;
+    string name = 4;
+    string machineName = 5;
+    string accessKey = 6;
+    repeated string availableJobs = 7;
+}
+
+message Job {
+    string id = 1;
+    string namespace = 2;
+    string jobName = 3;
+    google.protobuf.Duration timeout = 4;
+    repeated string parameters = 5;
+    google.protobuf.Timestamp jobStart = 6;
+    google.protobuf.Duration executionTime = 7;
+
+    enum JobStatus {
+        New = 0;
+        Scheduling = 1;
+        Success = 2;
+        Warning = 4;
+        Error = 8;
+        MissingExecutor = 16;
+        SchedulingFailed = 32;
+    }
+
+    JobStatus status = 8;
+    string error = 9;
+}
+
+message JobLogRow {
+    string jobId = 1;
+    google.protobuf.Timestamp utcTimestamp = 2;
+
+    enum LogLevel {
+        Unknown = 0;
+        Fine = 1;
+        Verbose = 20;
+        Debug = 30;
+        Info = 40;
+        Warning = 50;
+        Error = 60;
+        Fatal = 70;
+    }
+
+    LogLevel level = 3;
+    string message = 4;
+    string template = 5;
+    map<string, string> properties = 6;
+
+    message JobLogRowError {
+        string message = 1;
+        string stackTrace = 2;
+        string typeName = 3;
+    }
+
+    JobLogRowError error = 7;
+    string rowId = 8;
+}
+
+message JobLogRowBatch {
+    repeated JobLogRow rows = 1;
+    string jobId = 2;
+}

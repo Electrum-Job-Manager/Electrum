@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Electrum.Core.Store;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,8 @@ namespace Electrum.Core.Logging
 
         public class JobLogRow
         {
+            [ElectrumStoreKey]
+            public Guid JobId { get; set; }
             public Guid RowId { get; set; }
             public DateTime UtcTimestamp { get; set; }
             public LogLevel Level { get; set; }

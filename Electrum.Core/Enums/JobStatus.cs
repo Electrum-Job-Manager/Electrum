@@ -14,5 +14,6 @@ namespace Electrum.Core.Enums
         Error = 8,
         MissingExecutor = 16,
         SchedulingFailed = 32,
+        TimedOut = 64,
     }
 }

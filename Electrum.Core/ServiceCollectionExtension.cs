@@ -1,4 +1,6 @@
 ﻿using Electrum.Core.Distribution;
+using Electrum.Core.Execution;
+using Electrum.Core.Logging;
 using Electrum.Core.Services;
 using Electrum.Core.Services.Implementations;
 using Electrum.Core.Store;
@@ -37,6 +39,13 @@ namespace Electrum.Core
         {
             ServiceCollection.AddScoped<IJobSchedulerService, JobSchedulerService>();
             ServiceCollection.AddScoped<IElectrumNamespaceService, ElectrumNamespaceService>();
+            ServiceCollection.AddScoped<JobLog>();
+            ServiceCollection.AddScoped<JobDistributionService>();
+        }
+
+        public void AsClient()
+        {
+            ServiceCollection.AddScoped<JobExecutorService>();
         }
     }
 }

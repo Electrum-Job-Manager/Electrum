@@ -19,7 +19,22 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Electrum.Tests", "Electrum.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "30 - Logging", "30 - Logging", "{C5D058A0-F9C3-4346-AD0F-FE09CD0A3E46}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Electrum.Logging.SeriLog", "Electrum.Logging.SeriLog\Electrum.Logging.SeriLog.csproj", "{81C11562-D4F5-48BA-A7EE-3B4FB79E41AA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Electrum.Logging.SeriLog", "Electrum.Logging.SeriLog\Electrum.Logging.SeriLog.csproj", "{81C11562-D4F5-48BA-A7EE-3B4FB79E41AA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "40 - Clients", "40 - Clients", "{45B336E4-2507-43E1-A312-5F6295B90DD5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tcp", "Tcp", "{B0FE1A30-0581-42CF-A28E-0915C87AFDDD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Electrum.Communication.Tcp", "Electrum.Communication.Tcp\Electrum.Communication.Tcp.csproj", "{A49ED42A-B854-445F-868C-CF5CE0084684}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "gRPC", "gRPC", "{CF7EFDC9-9611-4E0D-A228-4C1D387092A0}"
+	ProjectSection(SolutionItems) = preProject
+		Electrum_gRPC.proto = Electrum_gRPC.proto
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Electrum.Communication.gRPC.Worker", "Electrum.Communication.gRPC.Worker\Electrum.Communication.gRPC.Worker.csproj", "{86D9FF8D-DA1E-43EB-BDCB-8C08B6F42592}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Electrum.Communication.gRPC.Worker.Server", "Electrum.Communication.gRPC.Worker.Server\Electrum.Communication.gRPC.Worker.Server.csproj", "{15B691FC-7AB7-41A6-8817-CB3B5830B09D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,6 +62,18 @@ Global
 		{81C11562-D4F5-48BA-A7EE-3B4FB79E41AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81C11562-D4F5-48BA-A7EE-3B4FB79E41AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81C11562-D4F5-48BA-A7EE-3B4FB79E41AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A49ED42A-B854-445F-868C-CF5CE0084684}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A49ED42A-B854-445F-868C-CF5CE0084684}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A49ED42A-B854-445F-868C-CF5CE0084684}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A49ED42A-B854-445F-868C-CF5CE0084684}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86D9FF8D-DA1E-43EB-BDCB-8C08B6F42592}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86D9FF8D-DA1E-43EB-BDCB-8C08B6F42592}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86D9FF8D-DA1E-43EB-BDCB-8C08B6F42592}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86D9FF8D-DA1E-43EB-BDCB-8C08B6F42592}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15B691FC-7AB7-41A6-8817-CB3B5830B09D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15B691FC-7AB7-41A6-8817-CB3B5830B09D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15B691FC-7AB7-41A6-8817-CB3B5830B09D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15B691FC-7AB7-41A6-8817-CB3B5830B09D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -57,6 +84,11 @@ Global
 		{336EC987-E352-4B28-A2B7-71644ACA5C7B} = {6400F671-7764-4A48-8B3E-A1D2556350F7}
 		{A043B347-0F24-41B5-9808-18997D17BCFC} = {6400F671-7764-4A48-8B3E-A1D2556350F7}
 		{81C11562-D4F5-48BA-A7EE-3B4FB79E41AA} = {C5D058A0-F9C3-4346-AD0F-FE09CD0A3E46}
+		{B0FE1A30-0581-42CF-A28E-0915C87AFDDD} = {45B336E4-2507-43E1-A312-5F6295B90DD5}
+		{A49ED42A-B854-445F-868C-CF5CE0084684} = {B0FE1A30-0581-42CF-A28E-0915C87AFDDD}
+		{CF7EFDC9-9611-4E0D-A228-4C1D387092A0} = {45B336E4-2507-43E1-A312-5F6295B90DD5}
+		{86D9FF8D-DA1E-43EB-BDCB-8C08B6F42592} = {CF7EFDC9-9611-4E0D-A228-4C1D387092A0}
+		{15B691FC-7AB7-41A6-8817-CB3B5830B09D} = {CF7EFDC9-9611-4E0D-A228-4C1D387092A0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1336EAF4-3575-4F81-8233-A7338739F1A9}

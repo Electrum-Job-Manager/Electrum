@@ -136,7 +136,7 @@ namespace Electrum.Tests.Tests
             Assert.NotNull(cJob.GetNextDate());
             var date = cJob.GetNextDate();
             var now = DateTime.UtcNow;
-            var d = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute + 1, 0);
+            var d = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute + (now.Second == 0 ? 0 : 1), 0);
             Assert.Equal(d, date);
         }
 

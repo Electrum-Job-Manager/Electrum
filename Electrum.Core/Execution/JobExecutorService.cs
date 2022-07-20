@@ -33,10 +33,11 @@ namespace Electrum.Core.Execution
 
         public JobExecutorService(IServiceProvider serviceProvider, ElectrumJobDiscoveryService jobDiscoveryService) => (JobDiscoveryService, ServiceProvider) = (jobDiscoveryService, serviceProvider.CreateScope().ServiceProvider);
 
-        public ElectrumJob ExecuteJob(ElectrumJob job)
+        public ElectrumJob ExecuteJob(ElectrumJob job, IJobLoggingClient jobLoggingClient = null)
         {
             if (job == null) return null;
-            var jobLogger = new JobLogger(ServiceProvider.GetService<ILogger<JobLogger>>(), job.Id, ServiceProvider.GetService<IJobLoggingClient>(), false);
+            if (jobLoggingClient == null) jobLoggingClient = ServiceProvider.GetService<IJobLoggingClient>();
+            var jobLogger = new JobLogger(ServiceProvider.GetService<ILogger<JobLogger>>(), job.Id, jobLoggingClient, true);
             // Find namespace
             var hasExecutorInThatNamespace = ExecutableJobsInNamespaces.ContainsKey(job.Namespace.Name);
             if (!hasExecutorInThatNamespace)
@@ -55,6 +56,7 @@ namespace Electrum.Core.Execution
             }
             jobLogger.Info("Executing job {JobId} in namespace {Namespace} with name {JobName} and with {ParameterCount} parameter(s).", job.Id, job.Namespace.Name, job.JobName, job.Parameters.Length);
             var result = executor.Execute(jobLogger, job);
+            jobLogger.SaveRows();
             if (job.Status == Enums.JobStatus.Warning)
             {
                 jobLogger.Warning("Job {JobId} executed in {JobExecutionTime} with status '{JobStatus}'. Message: ", job.Id, job.ExecutionTime, job.Status, job.Error);
