@@ -1,4 +1,5 @@
 ﻿using Electrum.Core.Enums;
+using Electrum.Core.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -37,12 +38,12 @@ namespace Electrum.Core.Execution
             }
         }
 
-        public ElectrumJob Execute(ElectrumJob job)
+        public ElectrumJob Execute(JobLogger jobLogger, ElectrumJob job)
         {
             var sw = Stopwatch.StartNew();
             try
             {
-                var result = Method.Invoke(this, new object[] { job });
+                var result = Method.Invoke(this, new object[] { jobLogger, job });
                 job.Status = JobStatus.Success;
             } catch (Exception ex)
             {
