@@ -1,4 +1,5 @@
-﻿using Electrum.Core.Distribution;
+﻿using Electrum.Core.Discovery;
+using Electrum.Core.Distribution;
 using Electrum.Core.Execution;
 using Electrum.Core.Logging;
 using Electrum.Core.Services;
@@ -43,9 +44,43 @@ namespace Electrum.Core
             ServiceCollection.AddScoped<JobDistributionService>();
         }
 
-        public void AsClient()
+        public void AsClient(Action<ElectrumClientConfiguration> options)
         {
             ServiceCollection.AddScoped<JobExecutorService>();
+            var conf = new ElectrumClientConfiguration(ServiceCollection);
+            options(conf);
+            conf.ApplyDefaults();
+        }
+
+
+
+
+
+        public class ElectrumClientConfiguration
+        {
+            private bool UseDefaultDiscoveryService = true;
+            private IServiceCollection services;
+
+            public ElectrumClientConfiguration(IServiceCollection services)
+            {
+                this.services = services;
+            }
+            
+            public ElectrumClientConfiguration WithJobDiscoveryService<T>() where T : class, IJobDiscoveryService
+            {
+                UseDefaultDiscoveryService = false;
+                services.AddScoped<IJobDiscoveryService, T>();
+                return this;
+            }
+
+            internal void ApplyDefaults()
+            {
+                if(UseDefaultDiscoveryService)
+                {
+                    services.AddScoped<IJobDiscoveryService, ElectrumJobDiscoveryService>();
+                }
+            }
+
         }
     }
 }

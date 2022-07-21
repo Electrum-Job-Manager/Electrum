@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Electrum.Core.Discovery
 {
-    public class ElectrumJobDiscoveryService
+    public class ElectrumJobDiscoveryService : IJobDiscoveryService
     {
 
         public List<ExecutableJob> DiscoverJobExecutors()

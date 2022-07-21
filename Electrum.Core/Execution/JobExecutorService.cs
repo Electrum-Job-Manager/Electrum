@@ -14,7 +14,7 @@ namespace Electrum.Core.Execution
     public class JobExecutorService
     {
 
-        public ElectrumJobDiscoveryService JobDiscoveryService { get; }
+        public IJobDiscoveryService JobDiscoveryService { get; }
         public IServiceProvider ServiceProvider { get; }
 
         private Dictionary<string, List<ExecutableJob>>? _executableJobsInNamespaces;
@@ -31,7 +31,7 @@ namespace Electrum.Core.Execution
             }
         }
 
-        public JobExecutorService(IServiceProvider serviceProvider, ElectrumJobDiscoveryService jobDiscoveryService) => (JobDiscoveryService, ServiceProvider) = (jobDiscoveryService, serviceProvider.CreateScope().ServiceProvider);
+        public JobExecutorService(IServiceProvider serviceProvider, IJobDiscoveryService jobDiscoveryService) => (JobDiscoveryService, ServiceProvider) = (jobDiscoveryService, serviceProvider.CreateScope().ServiceProvider);
 
         public ElectrumJob ExecuteJob(ElectrumJob job, IJobLoggingClient jobLoggingClient = null)
         {

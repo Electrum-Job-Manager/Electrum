@@ -21,40 +21,43 @@ namespace Electrum.Communication.gRPC.Worker.Server
 
         public override Task SubscribeToJobs(ClientInfo request, IServerStreamWriter<Job> responseStream, ServerCallContext context)
         {
-            var auth = context.AuthContext.FindPropertiesByName("Authentication").FirstOrDefault()?.Value.Split(' ')[1];
-            var clientId = context.AuthContext.FindPropertiesByName("Client-Id").FirstOrDefault();
-            var authKey = clientId + ":" + auth;
-            var clientInfo = new Core.Distribution.ClientInfo
+            return Task.Run(async () =>
             {
-                Id = new Guid(request.Id),
-                Name = request.Name,
-                MachineName = request.MachineName,
-                MaxConcurrentJobs = request.MaxConcurrentJobs,
-                AccessKey = request.AccessKey,
-                ElectrumClientVersion = request.ElectrumClientVersion,
-            };
-            var jobs = request.AvailableJobs.ToList();
-            var jobsDict = jobs.GroupBy(x => string.Join("/", x.Split('/').SkipLast(1).ToList())).ToDictionary(x => x.Key, x => x.Select(y => y.Split('/').TakeLast(1).FirstOrDefault() ?? "-").ToList());
-            var jobExecutor = new GrpcJobExecutor(clientInfo, jobsDict);
-            jobExecutors.Add(authKey, jobExecutor);
-            while(!context.CancellationToken.IsCancellationRequested) {
-                while (jobExecutor.jobQueue.Count > 0)
+                var auth = context.AuthContext.FindPropertiesByName("Authentication").FirstOrDefault()?.Value.Split(' ')[1];
+                var clientId = context.AuthContext.FindPropertiesByName("Client-Id").FirstOrDefault();
+                var authKey = clientId + ":" + auth;
+                var clientInfo = new Core.Distribution.ClientInfo
                 {
-                    var job = jobExecutor.jobQueue.Dequeue();
-                    var grpcJob = new Job()
+                    Id = new Guid(request.Id),
+                    Name = request.Name,
+                    MachineName = request.MachineName,
+                    MaxConcurrentJobs = request.MaxConcurrentJobs,
+                    AccessKey = request.AccessKey,
+                    ElectrumClientVersion = request.ElectrumClientVersion,
+                };
+                var jobs = request.AvailableJobs.ToList();
+                var jobsDict = jobs.GroupBy(x => string.Join("/", x.Split('/').SkipLast(1).ToList())).ToDictionary(x => x.Key, x => x.Select(y => y.Split('/').TakeLast(1).FirstOrDefault() ?? "-").ToList());
+                var jobExecutor = new GrpcJobExecutor(clientInfo, jobsDict);
+                jobExecutors.Add(authKey, jobExecutor);
+                while (!context.CancellationToken.IsCancellationRequested)
+                {
+                    while (jobExecutor.jobQueue.Count > 0)
                     {
-                        Id = job.Id.ToString(),
-                        JobName = job.JobName,
-                        Namespace = job.Namespace.Name,
-                        Timeout = Duration.FromTimeSpan(job.Timeout),
-                        Status = (Job.Types.JobStatus) System.Enum.Parse(typeof(Job.Types.JobStatus), System.Enum.GetName(typeof(Core.Enums.JobStatus), job.Status))
-                    };
-                    grpcJob.Parameters.AddRange(job.Parameters);
-                    responseStream.WriteAsync(grpcJob);
+                        var job = jobExecutor.jobQueue.Dequeue();
+                        var grpcJob = new Job()
+                        {
+                            Id = job.Id.ToString(),
+                            JobName = job.JobName,
+                            Namespace = job.Namespace.Name,
+                            Timeout = Duration.FromTimeSpan(job.Timeout),
+                            Status = (Job.Types.JobStatus)System.Enum.Parse(typeof(Job.Types.JobStatus), System.Enum.GetName(typeof(Core.Enums.JobStatus), job.Status))
+                        };
+                        grpcJob.Parameters.AddRange(job.Parameters);
+                        await responseStream.WriteAsync(grpcJob);
+                    }
+                    await Task.Delay(50);
                 }
-                Thread.Sleep(100);
-            }
-            return Task.CompletedTask;
+            });
         }
 
         public override Task<Empty> JobCompleted(Job job, ServerCallContext context)
