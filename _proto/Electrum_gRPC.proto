@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+option csharp_namespace = "Electrum.Communication.gRPC";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+package Electrum;
+
+service JobService {
+    rpc GetJob (string) returns (Job);
+    rpc AllJobs (GetJobsQuery) returns (ManyJobs);
+    rpc AllJobsByStatus (GetJobsByStatusQuery) returns (ManyJobs);
+    rpc GetRunningJobs (google.protobuf.Empty) returns (ManyJobs);
+    rpc GetLatestJobs (google.protobuf.Empty) returns (ManyJobs);
+    rpc GetLatestJobsJob (GetJobsQuery) returns (ManyJobs);
+    rpc GetLatestJobsByStatus (GetJobsByStatusQuery) returns (ManyJobs);
+    rpc GetJobLog (string) returns (JobLog);
+
+    rpc SubscribeToJobs (google.protobuf.Empty) returns (stream Job);
+    rpc SubscribeToJobsByJob (GetJobsQuery) returns (stream Job);
+    rpc SubscribeToJobsByStatus (GetJobsByStatusQuery) returns (stream Job);
+    rpc SubscribeToJobLogs (google.protobuf.Empty) returns (stream JobLog);
+    rpc SubscribeToJobLogsByJob (GetJobsQuery) returns (stream JobLog);
+
+    rpc CreateJob (Job) returns (ScheduledJob);
+    rpc QueueJob (string) returns (ScheduledJob);
+    rpc CancelJob (string) returns (Job);
+}
+
+service NamespaceService {
+    rpc GetNamespace (string) returns (Namespace);
+    rpc AllNamespaces (google.protobuf.Empty) returns (ManyNamespaces);
+    rpc CreateNamespace (Namespace) returns (Namespace);
+    rpc UpdateNamespace (Namespace) returns (Namespace);
+    rpc DeleteNamespace (string) returns (google.protobuf.Empty);
+}
+
+service SchedulerService {
+    rpc GetRecurringJobs (google.protobuf.Empty) returns (ManyRecurringJobs);
+    rpc CreateRecurringJob (RecurringJob) returns (RecurringJob);
+    rpc UpdateRecurringJob (RecurringJob) returns (RecurringJob);
+    rpc DeleteRecurringJob (string) returns (google.protobuf.Empty);
+}
+
+service SecurityService {
+    rpc GetKeys (google.protobuf.Empty) returns (ManyKeys);
+    rpc CreateKey (Key) returns (Key);
+    rpc UpdateKey (Key) returns (Key);
+    rpc DeleteKey (string) returns (google.protobuf.Empty);
+}
+
+message Key {
+    string key = 1;
+    string label = 2;
+    string description = 3;
+    bool is_active = 4;
+    repeated string permissions = 5;
+    google.protobuf.Timestamp created_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
+    google.protobuf.Timestamp last_used = 8;
+    string internal_key = 9; // May be used for assigning a key to a user
+}
+
+message ManyKeys {
+    repeated Key keys = 1;
+    int32 total = 2;
+}
+
+message Namespace {
+    string id = 1;
+    string name = 2;
+}
+
+message ManyNamespaces {
+    repeated Namespace namespaces = 1;
+    int32 total = 2;
+}
+
+message RecurringJob {
+    string id = 1;
+    string name = 2;
+    string namespace = 3;
+    string cron = 4;
+    repeated string parameters = 5;
+    google.protobuf.Duration timeout = 6;
+    google.protobuf.Timestamp next_date = 7;
+}
+
+message ManyRecurringJobs {
+    repeated RecurringJob recurring_jobs = 1;
+    int32 total = 2;
+}
+
+message GetJobsQuery {
+    string namespace = 1;
+    string name = 2;
+    int32 skip = 2;
+    int32 take = 3;
+}
+
+message ManyJobs {
+    repeated Job jobs = 1;
+    int32 total = 2;
+}
+
+message ClientInfo {
+    string id = 1;
+    int32 maxConcurrentJobs = 2;
+    int32 electrumClientVersion = 3;
+    string name = 4;
+    string machineName = 5;
+    string accessKey = 6;
+    repeated string availableJobs = 7;
+}
+
+message GetJobsByStatusQuery {
+    JobStatus status = 1;
+    int32 skip = 2;
+    int32 take = 3;
+}
+
+enum JobStatus {
+    New = 0;
+    Scheduling = 1;
+    Success = 2;
+    Warning = 4;
+    Error = 8;
+    MissingExecutor = 16;
+    SchedulingFailed = 32;
+    TimedOut = 64;
+    Running = 128;
+}
+
+message ScheduledJob {
+    Job job = 1;
+    google.protobuf.Timestamp plannedExecution = 2;
+    int32 maxSchedulingRetries = 3;
+    int32 timesTriedScheduling = 4;
+    google.protobuf.Timestamp lastTriedScheduling = 5;
+}
+
+message Job {
+    string id = 1;
+    string namespace = 2;
+    string jobName = 3;
+    google.protobuf.Duration timeout = 4;
+    repeated string parameters = 5;
+    google.protobuf.Timestamp jobStart = 6;
+    google.protobuf.Duration executionTime = 7;
+
+    
+
+    JobStatus status = 8;
+    string error = 9;
+}
+
+message JobLogRow {
+    string jobId = 1;
+    google.protobuf.Timestamp utcTimestamp = 2;
+
+    enum LogLevel {
+        Unknown = 0;
+        Fine = 1;
+        Verbose = 20;
+        Debug = 30;
+        Info = 40;
+        Warning = 50;
+        Error = 60;
+        Fatal = 70;
+    }
+
+    LogLevel level = 3;
+    string message = 4;
+    string template = 5;
+    map<string, string> properties = 6;
+
+    message JobLogRowError {
+        string message = 1;
+        string stackTrace = 2;
+        string typeName = 3;
+    }
+
+    JobLogRowError error = 7;
+    string rowId = 8;
+}
+
+message JobLogRowBatch {
+    repeated JobLogRow rows = 1;
+    string jobId = 2;
+}

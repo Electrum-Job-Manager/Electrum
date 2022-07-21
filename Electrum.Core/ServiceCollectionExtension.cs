@@ -1,4 +1,5 @@
-﻿using Electrum.Core.Discovery;
+﻿using Electrum.Core.API;
+using Electrum.Core.Discovery;
 using Electrum.Core.Distribution;
 using Electrum.Core.Execution;
 using Electrum.Core.Logging;
@@ -41,7 +42,11 @@ namespace Electrum.Core
             ServiceCollection.AddScoped<IJobSchedulerService, JobSchedulerService>();
             ServiceCollection.AddScoped<IElectrumNamespaceService, ElectrumNamespaceService>();
             ServiceCollection.AddScoped<JobLog>();
-            ServiceCollection.AddScoped<JobDistributionService>();
+            ServiceCollection.AddSingleton<JobDistributionService>();
+            ServiceCollection.AddHostedService<JobScheduleProcessor>();
+
+            // API
+            ServiceCollection.AddScoped<JobAPIService>();
         }
 
         public void AsClient(Action<ElectrumClientConfiguration> options)

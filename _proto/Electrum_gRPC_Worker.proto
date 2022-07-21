@@ -42,6 +42,8 @@ message Job {
         Error = 8;
         MissingExecutor = 16;
         SchedulingFailed = 32;
+        TimedOut = 64;
+		Running = 128;
     }
 
     JobStatus status = 8;

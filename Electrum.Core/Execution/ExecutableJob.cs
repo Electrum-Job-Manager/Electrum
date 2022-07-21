@@ -43,12 +43,13 @@ namespace Electrum.Core.Execution
             var sw = Stopwatch.StartNew();
             try
             {
-                var result = Method.Invoke(this, new object[] { jobLogger, job });
+                var result = Method.Invoke(TypeInstance, new object[] { jobLogger, job });
                 job.Status = JobStatus.Success;
             } catch (Exception ex)
             {
                 job.Status = JobStatus.Error;
                 job.Error = ex.Message;
+                jobLogger.Error(ex, "An error occured during invocation of the job");
             }
             sw.Stop();
             job.ExecutionTime = sw.Elapsed;

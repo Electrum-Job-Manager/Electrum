@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Electrum.Core.Store;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,17 +11,28 @@ namespace Electrum.Core.Distribution
     public class JobDistributionService
     {
         #region Client Store
-        private Dictionary<Guid, IJobExecutionClient> ExecutionClients { get; } = new Dictionary<Guid, IJobExecutionClient>();
-        private Dictionary<Guid, ClientInfo> Clients { get; } = new Dictionary<Guid, ClientInfo>();
+        private static Dictionary<Guid, IJobExecutionClient> ExecutionClients { get; } = new Dictionary<Guid, IJobExecutionClient>();
+        private static Dictionary<Guid, ClientInfo> Clients { get; } = new Dictionary<Guid, ClientInfo>();
         /// <summary>
         /// The Guid is the client id
         /// </summary>
-        private Dictionary<Guid, List<ElectrumJob>> RunningJobsOnClients = new Dictionary<Guid, List<ElectrumJob>>();
+        private static Dictionary<Guid, List<ElectrumJob>> RunningJobsOnClients = new Dictionary<Guid, List<ElectrumJob>>();
         #endregion
 
         #region Job Availability
-        private Dictionary<string, Dictionary<string, List<Guid>>> ClientsByJobs { get; } = new Dictionary<string, Dictionary<string, List<Guid>>>();
+        private static Dictionary<string, Dictionary<string, List<Guid>>> ClientsByJobs { get; } = new Dictionary<string, Dictionary<string, List<Guid>>>();
         #endregion
+
+        private ILogger<JobDistributionService> Logger { get; }
+        private IJobSchedulerService JobSchedulerService { get; }
+        private IElectrumObjectRepository<ElectrumJob> JobRepo { get; }
+
+        public JobDistributionService(ILogger<JobDistributionService> logger, IJobSchedulerService jobSchedulerService, ElectrumObjectRepositoryFactory repoFactory)
+        {
+            Logger = logger;
+            JobSchedulerService = jobSchedulerService;
+            JobRepo = repoFactory.GetRepo<ElectrumJob>();
+        }
 
         public void AddClient(IJobExecutionClient client)
         {
@@ -45,12 +58,19 @@ namespace Electrum.Core.Distribution
                     jobClients.Add(clientInfo.Id);
                 }
             }
+            Logger.LogInformation("Client {ClientId} joined the job distribution pool", clientInfo.Id);
         }
 
         public void RemoveClient(Guid id)
         {
+            Logger.LogInformation("Client {ClientId} is being disconnected", id);
             // Reschedule the active jobs on the client
-            
+            foreach (var item in RunningJobsOnClients[id])
+            {
+                Logger.LogInformation("Rescheduling job {JobId}", item.Id);
+                JobSchedulerService.ScheduleJob(item);
+            }
+
 
             Clients.Remove(id);
             ExecutionClients.Remove(id);
@@ -64,6 +84,7 @@ namespace Electrum.Core.Distribution
                     jobClients.Remove(id);
                 }
             }
+            Logger.LogInformation("Client {ClientId} left the job distribution pool", id);
         }
 
         private List<Guid> GetClientsThatHasJob(string jobNamespace, string name)
@@ -90,17 +111,29 @@ namespace Electrum.Core.Distribution
                 .FirstOrDefault(); // Get the first one
         }
 
+        public bool HasClientForJob(ElectrumJob job)
+        {
+            var clientId = GetClientToExecuteJob(job.Namespace.Name, job.JobName);
+            return clientId != null && clientId != Guid.Empty;
+        }
+
         public async void ExecuteJob(ElectrumJob job)
         {
             var clientId = GetClientToExecuteJob(job.Namespace.Name, job.JobName);
-            if (clientId == null)
+            if (clientId == null || clientId == Guid.Empty)
             {
                 throw new Exception("No client found to execute the job");
             }
             var client = ExecutionClients[clientId.Value];
+            job.Status = Enums.JobStatus.Running;
+            JobRepo.Save(job);
             RunningJobsOnClients[clientId.Value].Add(job);
             await client.ExecuteAsync(job); // This will wait until the job is finished
-            RunningJobsOnClients[clientId.Value].Remove(job);
+            if (RunningJobsOnClients.ContainsKey(clientId.Value)) // If this does not contain the id, the client was disconnected
+            {
+                RunningJobsOnClients[clientId.Value].Remove(job);
+                JobRepo.Save(job);
+            }
         }
 
     }

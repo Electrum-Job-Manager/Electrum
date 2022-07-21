@@ -13,12 +13,14 @@ namespace Electrum.Core.Distribution
         internal static TimeSpan DefaultTimeout = TimeSpan.FromMinutes(1);
         private ElectrumObjectRepositoryFactory RepositoryFactory { get; }
         private IElectrumNamespaceService NamespaceService { get; }
-
+        
         public JobSchedulerService(ElectrumObjectRepositoryFactory repositoryFactory, IElectrumNamespaceService namespaceService)
         {
             RepositoryFactory = repositoryFactory;
             NamespaceService = namespaceService;
         }
+
+        public TimeSpan GetDefaultTimeout() => DefaultTimeout;
 
         public ScheduledJob ScheduleJob(ElectrumJob job) => ScheduleJob(job, DateTime.UtcNow);
 
@@ -70,9 +72,21 @@ namespace Electrum.Core.Distribution
             return ScheduleJob(job, executeAt);
         }
 
+        public List<ScheduledJob> GetScheduledJobs()
+        {
+            var scheduledJobRepo = RepositoryFactory.GetRepo<ScheduledJob>();
+            return scheduledJobRepo.ToList();
+        }
+
+        public void RemoveFromSchedule(ScheduledJob job)
+        {
+            var scheduledJobRepo = RepositoryFactory.GetRepo<ScheduledJob>();
+            scheduledJobRepo.Remove(job);
+        }
+
         public ScheduledCronJob ScheduleRecurringJob(ScheduledCronJob cronJob)
         {
-            throw new NotImplementedException();
+            return RepositoryFactory.GetRepo<ScheduledCronJob>().Add(cronJob);
         }
 
         public ScheduledCronJob ScheduleRecurringJob(string jobNamespace, string jobName, string cronSyntax) => ScheduleRecurringJob(jobNamespace, jobName, cronSyntax, DefaultTimeout);

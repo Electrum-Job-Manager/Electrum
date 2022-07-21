@@ -33,18 +33,19 @@ namespace Electrum.Communication.gRPC.Worker
             {
                 RowId = row.RowId.ToString(),
                 JobId = job.ToString(),
-                Template = row.Template,
+                Template = row.Template ?? "",
                 Error = row.Error != null ? new JobLogRow.Types.JobLogRowError
                 {
-                    Message = row.Error.Message,
-                    StackTrace = row.Error.StackTrace,
-                    TypeName = row.Error.TypeName
+                    Message = row.Error.Message ?? "",
+                    StackTrace = row.Error.StackTrace ?? "",
+                    TypeName = row.Error.TypeName ?? ""
                 } : null,
                 Level = (JobLogRow.Types.LogLevel)row.Level,
-                Message = row.Message,
+                Message = row.Message ?? "",
                 UtcTimestamp = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(row.UtcTimestamp),
             };
-            nr.Properties.Add(row.Properties);
+            if(row.Properties != null)
+                nr.Properties.Add(row.Properties);
             return nr;
         }
 

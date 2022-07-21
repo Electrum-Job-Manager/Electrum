@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Serilog.Context;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -55,7 +56,19 @@ namespace Electrum.Core.Execution
                 return job;
             }
             jobLogger.Info("Executing job {JobId} in namespace {Namespace} with name {JobName} and with {ParameterCount} parameter(s).", job.Id, job.Namespace.Name, job.JobName, job.Parameters.Length);
-            var result = executor.Execute(jobLogger, job);
+            job.JobStart = DateTime.UtcNow;
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                var result = executor.Execute(jobLogger, job);
+            } catch (Exception ex)
+            {
+                job.Status = Enums.JobStatus.Error;
+                job.Error = ex.ToString();
+                jobLogger.Fatal(ex, "Failed to execute job {Id} ({NamespaceName}/{JobName}) an error occured", job.Id, job.Namespace.Name, job.JobName);
+            }
+            sw.Stop();
+            job.ExecutionTime = sw.Elapsed;
             jobLogger.SaveRows();
             if (job.Status == Enums.JobStatus.Warning)
             {

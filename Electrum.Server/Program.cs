@@ -21,6 +21,11 @@ namespace Electrum.Server
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder
+                    .ConfigureKestrel(options =>
+                    {
+                        options.ListenAnyIP(5000, o => o.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1);
+                        options.ListenAnyIP(5002, o => o.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
+                    })
                     .UseStartup<Startup>();
                 });
     }

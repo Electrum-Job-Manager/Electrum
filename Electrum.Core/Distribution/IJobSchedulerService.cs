@@ -8,7 +8,7 @@ namespace Electrum.Core.Distribution
 {
     public interface IJobSchedulerService
     {
-
+        public TimeSpan GetDefaultTimeout();
         public ScheduledJob ScheduleJob(ElectrumJob job);
         public ScheduledJob ScheduleJob(ElectrumJob job, DateTime executeAt);
         public ScheduledJob ScheduleJob(string jobNamespace, string jobName);
@@ -19,6 +19,8 @@ namespace Electrum.Core.Distribution
         public ScheduledJob ScheduleJob(string jobNamespace, string jobName, DateTime executeAt, params string[] args);
         public ScheduledJob ScheduleJob(string jobNamespace, string jobName, TimeSpan timeout, params string[] args);
         public ScheduledJob ScheduleJob(string jobNamespace, string jobName, TimeSpan timeout, DateTime executeAt, params string[] args);
+        List<ScheduledJob> GetScheduledJobs();
+        public void RemoveFromSchedule(ScheduledJob job);
 
 
         public ScheduledCronJob ScheduleRecurringJob(ScheduledCronJob cronJob);

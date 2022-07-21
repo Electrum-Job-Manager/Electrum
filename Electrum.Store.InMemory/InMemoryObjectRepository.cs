@@ -51,21 +51,31 @@ namespace Electrum.Store.InMemory
         {
             var type = typeof(T);
             var storeName = type.Name;
-            if (stores.ContainsKey(storeName))
+            lock (stores)
             {
-                _list = stores[storeName];
-                _storeKeyField = storeKeyFields[storeName];
+                if (stores.ContainsKey(storeName))
+                {
+                    _list = stores[storeName];
+                }
+                else
+                {
+                    _list = new List<T>();
+                    stores.Add(storeName, _list);
+                }
             }
-            else
+            lock (storeKeyFields)
             {
-                _list = new List<T>();
-                stores.Add(storeName, _list);
-
-                var fields = type.GetProperties();
-                var fieldsWithKeyAttribute = fields.Where(x => x.GetCustomAttribute<ElectrumStoreKeyAttribute>() != null);
-                _storeKeyField = fieldsWithKeyAttribute.FirstOrDefault();
-                storeKeyFields.Add(storeName, _storeKeyField);
-
+                if (storeKeyFields.ContainsKey(storeName))
+                {
+                    _storeKeyField = storeKeyFields[storeName];
+                }
+                else
+                {
+                    var fields = type.GetProperties();
+                    var fieldsWithKeyAttribute = fields.Where(x => x.GetCustomAttribute<ElectrumStoreKeyAttribute>() != null);
+                    _storeKeyField = fieldsWithKeyAttribute.FirstOrDefault();
+                    storeKeyFields.Add(storeName, _storeKeyField);
+                }
             }
             hasLoadedStoreInfo = true;
         }

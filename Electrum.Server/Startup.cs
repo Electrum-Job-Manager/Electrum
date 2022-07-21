@@ -14,7 +14,9 @@ namespace Electrum.Server
             services.AddControllers();
             services.UseElectron(options => options.AsServer());
             services.UseElectronInMemoryStore();
+            services.AddDistributedMemoryCache();
             services.AddGrpc();
+            services.AddHttpContextAccessor();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

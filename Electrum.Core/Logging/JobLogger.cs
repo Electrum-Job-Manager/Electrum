@@ -60,7 +60,7 @@ namespace Electrum.Core.Logging
                 Properties = new Dictionary<string, string>();
                 foreach (Match m in Regex.Matches(template, pattern, options))
                 {
-                    var paramName = m.Value;
+                    var paramName = m.Groups.Values.LastOrDefault()?.Value;
                     var paramValue = args[i++];
                     Properties.Add(paramName, paramValue?.ToString() ?? "-");
                 }
@@ -198,6 +198,29 @@ namespace Electrum.Core.Logging
             LiveLoggingEnabled = enableLiveLogging;
         }
 
+        private Task liveLoggingTask;
+        private bool isShuttingDown;
+
+        private void StartLiveLogging()
+        {
+            liveLoggingTask = Task.Run(async () =>
+            {
+                var allSentLogs = new List<JobLogRow>();
+                while (!isShuttingDown)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    if (isShuttingDown) break;
+                    var unsentLogs = logRows.Where(x => !allSentLogs.Any(y => y.RowId == x.RowId)).ToList();
+                    if (unsentLogs.Any())
+                    {
+                        var logs = unsentLogs.ToArray();
+                        allSentLogs.AddRange(logs);
+                        JobLoggingClient.WriteRows(JobId, logs);
+                    }
+                }
+            });
+        }
+
         public bool LiveLoggingEnabled { get; set; }
         public Guid JobId { get; }
         public IJobLoggingClient JobLoggingClient { get; }
@@ -208,9 +231,9 @@ namespace Electrum.Core.Logging
         private void Log(JobLogRow row)
         {
             logRows.Add(row);
-            if(LiveLoggingEnabled)
+            if (LiveLoggingEnabled && liveLoggingTask == null)
             {
-                JobLoggingClient.WriteRow(JobId, row);
+                StartLiveLogging();
             }
             row.LogToMEL(Logger);
         }
@@ -218,6 +241,11 @@ namespace Electrum.Core.Logging
         public void SaveRows()
         {
             JobLoggingClient.WriteRows(JobId, logRows);
+            if(liveLoggingTask != null)
+            {
+                isShuttingDown = true;
+                Task.WaitAll(liveLoggingTask);
+            }
         }
 
         #region Info

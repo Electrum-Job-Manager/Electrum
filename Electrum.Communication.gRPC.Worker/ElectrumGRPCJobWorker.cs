@@ -22,6 +22,8 @@ namespace Electrum.Communication.gRPC.Worker
         public CancellationToken CancellationToken { get; set; }
         public List<ExecutableJob> executableJobs = new List<ExecutableJob>();
 
+        private Metadata metadata;
+
         public ElectrumGRPCJobWorker(string electrumHost, string clientName, int maxConcurrentJobs, string accessKey, JobExecutorService executorService)
         {
             ElectrumClientInfo = new Core.Distribution.ClientInfo
@@ -36,24 +38,30 @@ namespace Electrum.Communication.gRPC.Worker
             Host = electrumHost;
             ExecutorService = executorService;
 
-            var credentials = CallCredentials.FromInterceptor((context, metadata) =>
+            //var credentials = CallCredentials.FromInterceptor((context, metadata) =>
+            //{
+            //    if (!string.IsNullOrEmpty(accessKey))
+            //    {
+            //        metadata.Add("Authorization", $"Key {accessKey}");
+            //    }
+            //    metadata.Add("Client-Id", $"{ElectrumClientInfo.Id.ToString()}");
+            //    return Task.CompletedTask;
+            //});
+
+            metadata = new Metadata
             {
-                if (!string.IsNullOrEmpty(accessKey))
-                {
-                    metadata.Add("Authorization", $"Key {accessKey}");
-                }
-                metadata.Add("Client-Id", $"{ElectrumClientInfo.Id.ToString()}");
-                return Task.CompletedTask;
-            });
+                { "AccessKey", accessKey },
+                { "Client-Id", ElectrumClientInfo.Id.ToString() }
+            };
 
             Channel = GrpcChannel.ForAddress(Host, new GrpcChannelOptions
             {
-                Credentials = ChannelCredentials.Create(new SslCredentials(), credentials)
+                //Credentials = ChannelCredentials.Create(new SslCredentials(), credentials)
             });
             Client = new JobExecutionClient.JobExecutionClientClient(Channel);
         }
 
-        public async void StartListener()
+        public async Task StartListener()
         {
             var grpcClientInfo = new ClientInfo()
             {
@@ -65,7 +73,7 @@ namespace Electrum.Communication.gRPC.Worker
                 MaxConcurrentJobs = ElectrumClientInfo.MaxConcurrentJobs,
             };
             grpcClientInfo.AvailableJobs.AddRange(ExecutorService.ExecutableJobsInNamespaces.ToDictionary(x => x.Key, x => x.Value.Select(x => x.JobName).ToList()).SelectMany(x => x.Value.Select(y => x.Key + "/" + y)).ToList());
-            var request = Client.SubscribeToJobs(grpcClientInfo, deadline: DateTime.MaxValue, cancellationToken: CancellationToken);
+            var request = Client.SubscribeToJobs(grpcClientInfo, deadline: DateTime.MaxValue, cancellationToken: CancellationToken, headers: metadata);
             var response = request.ResponseStream;
             var jobLoggingClient = new GRPCJobLoggingClient(Client);
             while(!CancellationToken.IsCancellationRequested)
@@ -93,11 +101,13 @@ namespace Electrum.Communication.gRPC.Worker
                         {
                             Id = returnJob.Id.ToString(),
                             JobName = returnJob.JobName,
+                            JobStart = Timestamp.FromDateTime(returnJob.JobStart),
                             Namespace = returnJob.Namespace.Name,
                             Timeout = Duration.FromTimeSpan(returnJob.Timeout),
+                            ExecutionTime = Duration.FromTimeSpan(returnJob.ExecutionTime),
                             Status = (Job.Types.JobStatus) System.Enum.Parse(typeof(Job.Types.JobStatus), System.Enum.GetName(typeof(Core.Enums.JobStatus), returnJob.Status))
                         };
-                        Client.JobCompleted(grpcJob, deadline: DateTime.Now.AddMinutes(5));
+                        Client.JobCompleted(grpcJob, deadline: DateTime.UtcNow.AddMinutes(5), headers: metadata);
                     });
                 }
             }

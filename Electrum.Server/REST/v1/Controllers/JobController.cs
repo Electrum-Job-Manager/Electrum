@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Electrum.Core;
+using Electrum.Core.API;
+using Electrum.Core.Logging;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,14 +15,25 @@ namespace Electrum.Server.REST.v1.Controllers
     public class JobController : ControllerBase
     {
 
+        public JobController(JobAPIService service) => (Service) = (service);
+
+        public JobAPIService Service { get; }
+
         [Route("{id}")]
-        public dynamic Get(string id)
+        public ElectrumJob Get(string id)
         {
-            return new
-            {
-                id = new Guid(id),
-                result = "Nah"
-            };
+            return Service.GetJob(new Guid(id));
+        }
+        
+        [Route("{id}/logs")]
+        public List<JobLogger.JobLogRow> GetLogs(string id)
+        {
+            return Service.GetLogs(new Guid(id));
+        }
+
+        public ScheduledJob Post(ElectrumJob job)
+        {
+            return Service.QueueJob(job);
         }
 
     }

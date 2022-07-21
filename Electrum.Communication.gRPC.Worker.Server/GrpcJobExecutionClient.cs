@@ -1,7 +1,10 @@
-﻿using Electrum.Core.Logging;
+﻿using Electrum.Core.Distribution;
+using Electrum.Core.Logging;
 using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 
 namespace Electrum.Communication.gRPC.Worker.Server
@@ -9,13 +12,29 @@ namespace Electrum.Communication.gRPC.Worker.Server
     public class GrpcJobExecutionClient : JobExecutionClient.JobExecutionClientBase
     {
 
-        private Dictionary<string, GrpcJobExecutor> jobExecutors = new Dictionary<string, GrpcJobExecutor>();
-
+        private static Dictionary<string, GrpcJobExecutor> jobExecutors = new Dictionary<string, GrpcJobExecutor>();
+        
         public JobLog JobLog { get; }
+        public ILogger<GrpcJobExecutionClient> Logger { get; }
+        public JobDistributionService JobDistributionService { get; set; }
+        private IHttpContextAccessor _httpContextAccessor;
 
-        public GrpcJobExecutionClient(JobLog jobLog)
+        public GrpcJobExecutionClient(ILogger<GrpcJobExecutionClient> logger, JobDistributionService jobDistributionService, JobLog jobLog, IHttpContextAccessor httpContextAccessor)
         {
             JobLog = jobLog;
+            Logger = logger;
+            JobDistributionService = jobDistributionService;
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        private string AuthKey
+        {
+            get
+            {
+                var accessKey = _httpContextAccessor.HttpContext.Request.Headers["AccessKey"];
+                var clientId = _httpContextAccessor.HttpContext.Request.Headers["Client-Id"];
+                return clientId +":" + accessKey;
+            }
         }
 
 
@@ -23,9 +42,6 @@ namespace Electrum.Communication.gRPC.Worker.Server
         {
             return Task.Run(async () =>
             {
-                var auth = context.AuthContext.FindPropertiesByName("Authentication").FirstOrDefault()?.Value.Split(' ')[1];
-                var clientId = context.AuthContext.FindPropertiesByName("Client-Id").FirstOrDefault();
-                var authKey = clientId + ":" + auth;
                 var clientInfo = new Core.Distribution.ClientInfo
                 {
                     Id = new Guid(request.Id),
@@ -38,7 +54,8 @@ namespace Electrum.Communication.gRPC.Worker.Server
                 var jobs = request.AvailableJobs.ToList();
                 var jobsDict = jobs.GroupBy(x => string.Join("/", x.Split('/').SkipLast(1).ToList())).ToDictionary(x => x.Key, x => x.Select(y => y.Split('/').TakeLast(1).FirstOrDefault() ?? "-").ToList());
                 var jobExecutor = new GrpcJobExecutor(clientInfo, jobsDict);
-                jobExecutors.Add(authKey, jobExecutor);
+                jobExecutors.Add(AuthKey, jobExecutor);
+                JobDistributionService.AddClient(jobExecutor);
                 while (!context.CancellationToken.IsCancellationRequested)
                 {
                     while (jobExecutor.jobQueue.Count > 0)
@@ -57,14 +74,14 @@ namespace Electrum.Communication.gRPC.Worker.Server
                     }
                     await Task.Delay(50);
                 }
+                JobDistributionService.RemoveClient(clientInfo.Id);
             });
         }
 
+        
+
         public override Task<Empty> JobCompleted(Job job, ServerCallContext context)
         {
-            var auth = context.AuthContext.FindPropertiesByName("Authentication").FirstOrDefault()?.Value.Split(' ')[1];
-            var clientId = context.AuthContext.FindPropertiesByName("Client-Id").FirstOrDefault();
-            var authKey = clientId + ":" + auth;
             var elJob = new Core.ElectrumJob
             {
                 Id = new Guid(job.Id),
@@ -73,29 +90,31 @@ namespace Electrum.Communication.gRPC.Worker.Server
                     Name = job.Namespace
                 },
                 JobName = job.JobName,
+                JobStart = job.JobStart.ToDateTime(),
                 Timeout = job.Timeout.ToTimeSpan(),
                 Parameters = job.Parameters.ToArray(),
+                ExecutionTime = job.ExecutionTime.ToTimeSpan(),
                 Status = (Core.Enums.JobStatus)System.Enum.Parse(typeof(Core.Enums.JobStatus), System.Enum.GetName(typeof(Job.Types.JobStatus), job.Status))
             };
-            jobExecutors[authKey].finishedJobs.Add(elJob.Id, elJob);
+            jobExecutors[AuthKey].finishedJobs.Add(elJob.Id, elJob);
             return Task.FromResult(new Empty());
         }
 
         private JobLogger.JobLogRow GrpcRowToElectrum(JobLogRow row)
         {
-            var n = new JobLogger.JobLogRow((LogLevel)row.Level, row.Message)
+            var n = new JobLogger.JobLogRow((Electrum.Core.Logging.LogLevel)row.Level, row.Message)
             {
                 JobId = new Guid(row.JobId),
                 RowId = new Guid(row.RowId),
                 Error = row.Error != null ? new JobLogger.JobLogRow.JobLogRowError
                 {
-                    Message = row.Error.Message,
-                    StackTrace = row.Error.StackTrace,
-                    TypeName = row.Error.TypeName
+                    Message = row.Error.Message.Length > 0 ? row.Error.Message : null,
+                    StackTrace = row.Error.StackTrace.Length > 0 ? row.Error.StackTrace : null,
+                    TypeName = row.Error.TypeName.Length > 0 ? row.Error.TypeName : null,
                 } : null,
-                Level = (LogLevel)row.Level,
-                Message = row.Message,
-                Template = row.Message,
+                Level = (Electrum.Core.Logging.LogLevel)row.Level,
+                Message = row.Message.Length > 0 ? row.Message : null,
+                Template = row.Template.Length > 0 ? row.Template : null,
                 Properties = row.Properties.ToDictionary(x => x.Key, x => x.Value),
                 UtcTimestamp = row.UtcTimestamp.ToDateTime()
             };
